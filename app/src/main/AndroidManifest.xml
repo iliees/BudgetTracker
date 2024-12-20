@@ -2,6 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Camera and Storage Permissions -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
+    <!-- Declare camera hardware as optional -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -23,10 +31,9 @@
             </intent-filter>
         </activity>
 
-        <!-- ParameterActivity -->
+        <!-- Other Activities -->
         <activity android:name=".ParameterActivity" android:exported="true" />
         <activity android:name=".DashboardActivity" android:exported="true" />
 
     </application>
-
 </manifest>

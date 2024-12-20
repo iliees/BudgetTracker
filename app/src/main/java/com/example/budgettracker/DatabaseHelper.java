@@ -5,13 +5,12 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.content.ContentValues;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     // Database Name and Version
     private static final String DATABASE_NAME = "BudgetTracker.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2; // Incremented for schema change
 
     // Table User
     private static final String TABLE_USER = "User";
@@ -20,14 +19,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String COLUMN_EMAIL = "email";
     private static final String COLUMN_BALANCE = "balance";
 
-    // Table Transaction (escape the name because "Transaction" is a reserved keyword)
+    // Table Transaction
     private static final String TABLE_TRANSACTION = "`Transaction`"; // Use backticks to escape
     private static final String COLUMN_TRANSACTION_ID = "transaction_id";
     private static final String COLUMN_TYPE = "type"; // Bool (0 for expense, 1 for income)
     private static final String COLUMN_AMOUNT = "amount";
     private static final String COLUMN_DATE = "transaction_date";
     private static final String COLUMN_DESCRIPTION = "description";
-    private static final String COLUMN_LOCATION = "location"; // New attribute for location
+    private static final String COLUMN_LOCATION = "location"; // For transaction location
+    private static final String COLUMN_IMAGE_PATH = "image_path"; // New column for image
 
     // Table RegularTransaction
     private static final String TABLE_REGULAR_TRANSACTION = "RegularTransaction";
@@ -52,11 +52,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         // Create Transaction Table
         String CREATE_TRANSACTION_TABLE = "CREATE TABLE " + TABLE_TRANSACTION + "("
                 + COLUMN_TRANSACTION_ID + " INTEGER PRIMARY KEY, "
-                + COLUMN_TYPE + " INTEGER, "
+                + COLUMN_TYPE + " INTEGER, " // 0 for expense, 1 for income
                 + COLUMN_AMOUNT + " REAL, "
                 + COLUMN_DATE + " TEXT, "
                 + COLUMN_DESCRIPTION + " TEXT, "
-                + COLUMN_LOCATION + " TEXT" // Add location column here
+                + COLUMN_LOCATION + " TEXT, "
+                + COLUMN_IMAGE_PATH + " TEXT" // Add image path column here
                 + ")";
         db.execSQL(CREATE_TRANSACTION_TABLE);
 
@@ -71,59 +72,36 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_USER);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_TRANSACTION); // Escaped name works here too
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_REGULAR_TRANSACTION);
-        onCreate(db);
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE " + TABLE_TRANSACTION + " ADD COLUMN " + COLUMN_IMAGE_PATH + " TEXT");
+        }
     }
 
-    public void addUser(String name, String email, double balance) {
+    // Add transaction with image
+    public void addTransaction(int type, double amount, String description, String date, String location, String imagePath) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
-        values.put("name", name);
-        values.put("email", email);
-        values.put("balance", balance);
-
-        db.insert("User", null, values); // Insert into User table
-        db.close();
-    }
-
-    public void addExpense(double amount, String description, String date, String location) {
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put(COLUMN_TYPE, 0); // 0 for expense
+        values.put(COLUMN_TYPE, type);
         values.put(COLUMN_AMOUNT, amount);
         values.put(COLUMN_DATE, date);
         values.put(COLUMN_DESCRIPTION, description);
         values.put(COLUMN_LOCATION, location);
+        values.put(COLUMN_IMAGE_PATH, imagePath); // Save image path
 
-        db.insert(TABLE_TRANSACTION, null, values); // Insert into Transaction table
+        db.insert(TABLE_TRANSACTION, null, values);
         db.close();
     }
 
+    // Fetch user data
     public Cursor getUser() {
         SQLiteDatabase db = this.getReadableDatabase();
         return db.rawQuery("SELECT * FROM User LIMIT 1", null);
     }
-    public void addRegularExpense(double amount, String description, String date, String location, String lastCheck) {
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put(COLUMN_TYPE, 0); // 0 for expense
-        values.put(COLUMN_AMOUNT, amount);
-        values.put(COLUMN_DATE, date);
-        values.put(COLUMN_DESCRIPTION, description);
-        values.put(COLUMN_LOCATION, location);
 
-        // Insert into Transaction table
-        long transactionId = db.insert(TABLE_TRANSACTION, null, values);
-
-        // Now insert into RegularTransaction table
-        ContentValues regularTransactionValues = new ContentValues();
-        regularTransactionValues.put(COLUMN_TRANSACTION_ID, transactionId);
-        regularTransactionValues.put(COLUMN_LAST_CHECK, lastCheck);
-
-        db.insert(TABLE_REGULAR_TRANSACTION, null, regularTransactionValues); // Insert into RegularTransaction table
-        db.close();
+    // Get last transactions
+    public Cursor getLastTransactions(int limit) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        return db.rawQuery("SELECT * FROM " + TABLE_TRANSACTION + " ORDER BY " + COLUMN_DATE + " DESC LIMIT " + limit, null);
     }
     public void deleteExpense(long transactionId) {
         SQLiteDatabase db = this.getWritableDatabase();
@@ -141,12 +119,4 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         db.close();
     }
-
-    public Cursor getLastTransactions(int limit) {
-        SQLiteDatabase db = this.getReadableDatabase();
-        return db.rawQuery("SELECT * FROM `Transaction` ORDER BY transaction_date DESC LIMIT " + limit, null);
-    }
-
-
-
 }
