@@ -119,4 +119,18 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         db.close();
     }
+
+
+    public void addUser(String name, String email, double balance) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put("name", name);
+        values.put("email", email);
+        values.put("balance", balance);
+
+        db.insert("User", null, values); // Insert into User table
+        db.close();
+    }
 }
+
+
