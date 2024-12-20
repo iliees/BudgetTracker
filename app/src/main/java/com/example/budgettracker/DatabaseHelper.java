@@ -77,9 +77,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    // Add transaction with image
+    // Add transaction with image and update balance
     public void addTransaction(int type, double amount, String description, String date, String location, String imagePath) {
         SQLiteDatabase db = this.getWritableDatabase();
+
+        // Insert transaction
         ContentValues values = new ContentValues();
         values.put(COLUMN_TYPE, type);
         values.put(COLUMN_AMOUNT, amount);
@@ -89,6 +91,32 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_IMAGE_PATH, imagePath); // Save image path
 
         db.insert(TABLE_TRANSACTION, null, values);
+
+        // Update user balance
+        updateUserBalance(type, amount);
+
+        db.close();
+    }
+
+    // Update user balance based on transaction type
+    private void updateUserBalance(int type, double amount) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        // Fetch the current balance
+        Cursor cursor = db.rawQuery("SELECT " + COLUMN_BALANCE + " FROM " + TABLE_USER + " LIMIT 1", null);
+        if (cursor != null && cursor.moveToFirst()) {
+            double currentBalance = cursor.getDouble(0);
+            cursor.close();
+
+            // Update balance: subtract for expense, add for income
+            double newBalance = type == 0 ? currentBalance - amount : currentBalance + amount;
+
+            // Update the balance in the database
+            ContentValues balanceUpdate = new ContentValues();
+            balanceUpdate.put(COLUMN_BALANCE, newBalance);
+            db.update(TABLE_USER, balanceUpdate, null, null);
+        }
+
         db.close();
     }
 
@@ -103,11 +131,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getReadableDatabase();
         return db.rawQuery("SELECT * FROM " + TABLE_TRANSACTION + " ORDER BY " + COLUMN_DATE + " DESC LIMIT " + limit, null);
     }
+
     public void deleteExpense(long transactionId) {
         SQLiteDatabase db = this.getWritableDatabase();
         db.delete(TABLE_TRANSACTION, COLUMN_TRANSACTION_ID + " = ?", new String[]{String.valueOf(transactionId)});
         db.close();
     }
+
     public void deleteRegularExpense(long transactionId) {
         SQLiteDatabase db = this.getWritableDatabase();
 
@@ -120,7 +150,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.close();
     }
 
-
     public void addUser(String name, String email, double balance) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
@@ -132,5 +161,3 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.close();
     }
 }
-
-
