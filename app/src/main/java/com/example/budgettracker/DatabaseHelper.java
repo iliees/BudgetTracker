@@ -2,6 +2,7 @@ package com.example.budgettracker;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.content.ContentValues;
@@ -86,5 +87,66 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.insert("User", null, values); // Insert into User table
         db.close();
     }
+
+    public void addExpense(double amount, String description, String date, String location) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_TYPE, 0); // 0 for expense
+        values.put(COLUMN_AMOUNT, amount);
+        values.put(COLUMN_DATE, date);
+        values.put(COLUMN_DESCRIPTION, description);
+        values.put(COLUMN_LOCATION, location);
+
+        db.insert(TABLE_TRANSACTION, null, values); // Insert into Transaction table
+        db.close();
+    }
+
+    public Cursor getUser() {
+        SQLiteDatabase db = this.getReadableDatabase();
+        return db.rawQuery("SELECT * FROM User LIMIT 1", null);
+    }
+    public void addRegularExpense(double amount, String description, String date, String location, String lastCheck) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_TYPE, 0); // 0 for expense
+        values.put(COLUMN_AMOUNT, amount);
+        values.put(COLUMN_DATE, date);
+        values.put(COLUMN_DESCRIPTION, description);
+        values.put(COLUMN_LOCATION, location);
+
+        // Insert into Transaction table
+        long transactionId = db.insert(TABLE_TRANSACTION, null, values);
+
+        // Now insert into RegularTransaction table
+        ContentValues regularTransactionValues = new ContentValues();
+        regularTransactionValues.put(COLUMN_TRANSACTION_ID, transactionId);
+        regularTransactionValues.put(COLUMN_LAST_CHECK, lastCheck);
+
+        db.insert(TABLE_REGULAR_TRANSACTION, null, regularTransactionValues); // Insert into RegularTransaction table
+        db.close();
+    }
+    public void deleteExpense(long transactionId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.delete(TABLE_TRANSACTION, COLUMN_TRANSACTION_ID + " = ?", new String[]{String.valueOf(transactionId)});
+        db.close();
+    }
+    public void deleteRegularExpense(long transactionId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        // Delete from RegularTransaction table first (because it references Transaction table)
+        db.delete(TABLE_REGULAR_TRANSACTION, COLUMN_TRANSACTION_ID + " = ?", new String[]{String.valueOf(transactionId)});
+
+        // Now delete from Transaction table
+        db.delete(TABLE_TRANSACTION, COLUMN_TRANSACTION_ID + " = ?", new String[]{String.valueOf(transactionId)});
+
+        db.close();
+    }
+
+    public Cursor getLastTransactions(int limit) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        return db.rawQuery("SELECT * FROM `Transaction` ORDER BY transaction_date DESC LIMIT " + limit, null);
+    }
+
+
 
 }
